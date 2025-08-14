@@ -8,4 +8,9 @@ public class RegularAccount extends Account {
       final double balance) {
     super(accountNumber, owner, balance);
   }
+
+  @Override
+  public double calculateCashback(double purchaseAmount) {
+    return 0;
+  }
 }

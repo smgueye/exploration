@@ -29,4 +29,11 @@ public abstract class Account {
   public double calculateMonthlyInterest() {
     return balance * 0.01;
   }
+
+  public abstract double calculateCashback(double purchaseAmount);
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + " " + accountNumber + " owned by " + owner;
+  }
 }

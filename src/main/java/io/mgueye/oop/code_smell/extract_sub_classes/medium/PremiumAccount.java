@@ -19,10 +19,7 @@ public class PremiumAccount extends Account {
 
   @Override
   public double calculateMonthlyInterest() {
-    double interest = balance * 0.02;
-    if (creditLimit > 0)
-      return interest + creditLimit * 0.01;
-    return interest;
+    return balance * 0.02 + creditLimit * 0.01;
   }
 
   public double calculateCashback(double purchaseAmount) {
