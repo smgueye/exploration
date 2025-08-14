@@ -1,4 +1,4 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.level1;
+package io.mgueye.oop.code_smell.extract_sub_classes.easy.vehicule;
 
 public class Vehicle {
   private String make;
