@@ -46,4 +46,21 @@ public class Recipient {
   public String getPostalCode() {
     return postalCode;
   }
+
+  boolean isValid(boolean isInternational) {
+    if (name == null || name.isBlank()) return false;
+    if (addressLine1 == null || addressLine1.isBlank()) return false;
+    if (city == null || city.isBlank()) return false;
+    if (postalCode == null || postalCode.isBlank()) return false;
+
+    boolean provinceOrStateFieldIsNotClean = !(stateOrProvince == null || stateOrProvince.isBlank());
+    if (isInternational && provinceOrStateFieldIsNotClean)
+      return false;
+
+    return true;
+  }
+
+  boolean isNotValid(boolean isInternational) {
+    return !isValid(isInternational);
+  }
 }
