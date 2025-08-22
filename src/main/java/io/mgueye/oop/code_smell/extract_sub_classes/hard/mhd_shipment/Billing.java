@@ -1,6 +1,6 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd;
+package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
-public class ShipmentBilling {
+public class Billing {
 
   private double baseRatePerKg;
   private double vatRate;
@@ -11,11 +11,11 @@ public class ShipmentBilling {
   private double weekendSurcharge;
   private double currencyRateToBilling;
 
-  public ShipmentBilling(double baseRatePerKg, double vatRate, double customsDutyRate, double ruralSurcharge,
-                         double weekendSurcharge,
-                         double insuranceRate,
-                         double currencyRateToBilling,
-                         double volumetricDivisor) {
+  public Billing(double baseRatePerKg, double vatRate, double customsDutyRate, double ruralSurcharge,
+                 double weekendSurcharge,
+                 double insuranceRate,
+                 double currencyRateToBilling,
+                 double volumetricDivisor) {
     this.baseRatePerKg = baseRatePerKg;
     this.vatRate = vatRate;
     this.customsDutyRate = customsDutyRate;

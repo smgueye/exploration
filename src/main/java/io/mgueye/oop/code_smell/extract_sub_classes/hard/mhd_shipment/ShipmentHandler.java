@@ -1,4 +1,4 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd;
+package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -7,24 +7,12 @@ import java.util.Objects;
 public class ShipmentHandler {
 
   private final Shipment shipment;
-
-  // recipient
   private Recipient recipient;
-
-  // Routing
-  private ShipmentDomesticRouting domesticRouting;
-
-  // CustomsDeclaration
-  private ShipmentDeclaration declaration;
-
-  // Dimension
-  private final ShipmentDimension dimension;
-
-  // Option
-  private ShipmentOption shipmentOption;
-
-  // Billing
-  private final ShipmentBilling billing;
+  private DomesticRouting domesticRouting;
+  private Declaration declaration;
+  private final Dimension dimension;
+  private Option option;
+  private final Billing billing;
 
 
   public ShipmentHandler(
@@ -36,8 +24,8 @@ public class ShipmentHandler {
       double widthCm,
       double heightCm) {
     this.shipment = new Shipment(id, "", originCountry, destinationCountry);
-    this.dimension = new ShipmentDimension(weightKg, lengthCm, widthCm, heightCm);
-    this.billing = new ShipmentBilling(6.75, 0.20, 0.08, 12.0, 15.0, 0.012, 1.0, 5000.0);
+    this.dimension = new Dimension(weightKg, lengthCm, widthCm, heightCm);
+    this.billing = new Billing(6.75, 0.20, 0.08, 12.0, 15.0, 0.012, 1.0, 5000.0);
   }
 
   public void setRecipient(String name, String line1, String line2, String city, String stateOrProvince, String postalCode) {
@@ -45,15 +33,15 @@ public class ShipmentHandler {
   }
 
   public void setOptions(boolean express, boolean weekendPickup, boolean dangerousGoods) {
-    this.shipmentOption = new ShipmentOption(express, weekendPickup, dangerousGoods);
+    this.option = new Option(express, weekendPickup, dangerousGoods);
   }
 
   public void setDomesticRouting(String stateZone, String pickupPointId, String remoteAreaCode) {
-    this.domesticRouting = new ShipmentDomesticRouting(stateZone, pickupPointId, remoteAreaCode);
+    this.domesticRouting = new DomesticRouting(stateZone, pickupPointId, remoteAreaCode);
   }
 
   public void setInternationalDetails(String hsCode, String incoterms, double declaredValue) {
-    this.declaration = new ShipmentDeclaration(hsCode, incoterms, declaredValue);
+    this.declaration = new Declaration(hsCode, incoterms, declaredValue);
   }
 
   public void setBilling(double baseRatePerKg, double vatRate, double customsDutyRate, double insuranceRate, double currencyRateToBilling, double volumetricDivisor) {
@@ -87,7 +75,7 @@ public class ShipmentHandler {
       if (domesticRouting.getPickupPointId() != null && domesticRouting.getPickupPointId().length() < 4) return false;
     }
 
-    if (this.shipmentOption.isDangerousGoods()) {
+    if (this.option.isDangerousGoods()) {
       if (international) {
         if (!"DAP".equals(incoterms) && !"DDP".equals(incoterms)) return false;
       } else {
@@ -95,14 +83,14 @@ public class ShipmentHandler {
       }
     }
 
-    if (this.shipmentOption.isExpress() && international && this.dimension.getWeightKg() > 30) return false;
+    if (this.option.isExpress() && international && this.dimension.getWeightKg() > 30) return false;
 
     return this.dimension.getWeightKg() > 0 && this.dimension.getLengthCm() > 0 && this.dimension.getWidthCm() > 0 && this.dimension.getHeightCm() > 0;
   }
 
   public String generateLabel() {
     boolean international = !Objects.equals(this.shipment.getOriginCountry(), this.shipment.getDestinationCountry());
-    String service = this.shipmentOption.isExpress() ? "EXP" : "STD";
+    String service = this.option.isExpress() ? "EXP" : "STD";
     StringBuilder b = new StringBuilder();
     b.append("ID:").append(this.shipment.getId()).append("\n");
     b.append("FROM:").append(this.shipment.getOriginCountry()).append(" TO:").append(this.shipment.getDestinationCountry()).append("\n");
@@ -125,7 +113,7 @@ public class ShipmentHandler {
       if (domesticRouting.getStateZone() != null) b.append("ZONE:").append(domesticRouting.getStateZone()).append("\n");
     }
 
-    b.append("DG:").append(this.shipmentOption.isDangerousGoods() ? "Y" : "N").append("\n");
+    b.append("DG:").append(this.option.isDangerousGoods() ? "Y" : "N").append("\n");
     b.append("DIM:").append(this.dimension.getLengthCm()).append("x").append(this.dimension.getWidthCm()).append("x").append(this.dimension.getHeightCm()).append("cm\n");
     b.append("WT:").append(this.dimension.getWeightKg()).append("kg\n");
     return b.toString();
@@ -135,15 +123,15 @@ public class ShipmentHandler {
     boolean international = !Objects.equals(this.shipment.getOriginCountry(), this.shipment.getDestinationCountry());
     int days;
     if (international) {
-      days = this.shipmentOption.isExpress() ? 3 : 7;
+      days = this.option.isExpress() ? 3 : 7;
       if ("DDP".equals(declaration.getIncoterms())) days -= 1;
-      if (this.shipmentOption.isDangerousGoods()) days += 2;
+      if (this.option.isDangerousGoods()) days += 2;
     } else {
-      days = this.shipmentOption.isExpress() ? 1 : 3;
+      days = this.option.isExpress() ? 1 : 3;
       if (domesticRouting.getStateZone() != null && !domesticRouting.getStateZone().isBlank()) days += 2;
       if ("Z3".equals(domesticRouting.getStateZone())) days += 1;
     }
-    if (this.shipmentOption.isWeekendPickup() && (shipDate.getDayOfWeek() == DayOfWeek.SATURDAY || shipDate.getDayOfWeek() == DayOfWeek.SUNDAY)) {
+    if (this.option.isWeekendPickup() && (shipDate.getDayOfWeek() == DayOfWeek.SATURDAY || shipDate.getDayOfWeek() == DayOfWeek.SUNDAY)) {
       days += 1;
     }
     return Math.max(days, 1);
@@ -152,7 +140,7 @@ public class ShipmentHandler {
   public String assignTrackingNumber() {
     boolean international = !Objects.equals(this.shipment.getOriginCountry(), this.shipment.getDestinationCountry());
     String prefix = international ? "INTL" : "DOM";
-    String mode = this.shipmentOption.isExpress() ? "X" : "S";
+    String mode = this.option.isExpress() ? "X" : "S";
     return String.format("%s-%s-%s-%s", prefix, mode, this.shipment.getId(), System.nanoTime());
   }
 
@@ -163,11 +151,11 @@ public class ShipmentHandler {
     double chargeableWeight = Math.max(this.dimension.getWeightKg(), volumetricWeight);
 
     double transport = chargeableWeight * this.billing.getBaseRatePerKg();
-    if (this.shipmentOption.isExpress()) transport *= 1.35;
+    if (this.option.isExpress()) transport *= 1.35;
 
     double extras = 0.0;
-    if (this.shipmentOption.isDangerousGoods()) extras += 25.0;
-    if (this.shipmentOption.isWeekendPickup()) extras += this.billing.getBaseRatePerKg();
+    if (this.option.isDangerousGoods()) extras += 25.0;
+    if (this.option.isWeekendPickup()) extras += this.billing.getBaseRatePerKg();
     if (!Objects.equals(this.shipment.getOriginCountry(), this.shipment.getDestinationCountry())) {
       transport *= 1.15;
     } else {

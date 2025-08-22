@@ -1,13 +1,13 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd;
+package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
-public class ShipmentDomesticRouting {
+public class DomesticRouting {
 
 
   private final String stateZone;
   private final String pickupPointId;
   private final String remoteAreaCode;
 
-  public ShipmentDomesticRouting(String stateZone, String pickupPointId, String remoteAreaCode) {
+  public DomesticRouting(String stateZone, String pickupPointId, String remoteAreaCode) {
     this.stateZone = stateZone;
     this.pickupPointId = pickupPointId;
     this.remoteAreaCode = remoteAreaCode;

@@ -1,13 +1,13 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd;
+package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
-public class ShipmentDimension {
+public class Dimension {
 
   private double weightKg;
   private double lengthCm;
   private double widthCm;
   private double heightCm;
 
-  public ShipmentDimension(double weightKg, double lengthCm, double widthCm, double heightCm) {
+  public Dimension(double weightKg, double lengthCm, double widthCm, double heightCm) {
     this.weightKg = weightKg;
     this.lengthCm = lengthCm;
     this.widthCm = widthCm;

@@ -1,6 +1,6 @@
 package io.mgueye.oop.code_smell.extract_sub_classes.hard;
 
-import io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd.ShipmentHandler;
+import io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment.ShipmentHandler;
 
 public class Init {
   public static void main(String[] args) {

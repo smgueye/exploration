@@ -1,12 +1,12 @@
-package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd;
+package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
-public class ShipmentOption {
+public class Option {
 
   private final boolean express ;
   private final boolean weekendPickup;
   private final boolean dangerousGoods;
 
-  public ShipmentOption(boolean express, boolean weekendPickup, boolean dangerousGoods) {
+  public Option(boolean express, boolean weekendPickup, boolean dangerousGoods) {
     this.express = express;
     this.weekendPickup = weekendPickup;
     this.dangerousGoods = dangerousGoods;
