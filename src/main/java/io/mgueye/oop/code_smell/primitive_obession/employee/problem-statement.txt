@@ -1,0 +1,27 @@
+public class Employee {
+    private String name;
+    private int type; // 0 = Engineer, 1 = Manager, 2 = Salesperson
+
+    public Employee(String name, int type) {
+        this.name = name;
+        this.type = type;
+    }
+
+    public int payAmount() {
+        switch (type) {
+            case 0: return 3000;
+            case 1: return 5000;
+            case 2: return 4000;
+            default: throw new IllegalArgumentException("Invalid type: " + type);
+        }
+    }
+
+    public String getTitle() {
+        switch (type) {
+            case 0: return "Engineer";
+            case 1: return "Manager";
+            case 2: return "Salesperson";
+            default: return "Unknown";
+        }
+    }
+}
