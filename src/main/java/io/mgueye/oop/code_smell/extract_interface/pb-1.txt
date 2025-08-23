@@ -1,0 +1,229 @@
+import java.io.*;
+import java.time.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * ROUND 1 — Large Class Bloater (Easy Case)
+ *
+ * Smells on purpose:
+ *  - Too many responsibilities (persistence, payments, notifications, exports, auditing, caching, rate limiting).
+ *  - Clients depend on the full concrete class instead of a minimal surface.
+ *  - Wide public API.
+ *
+ * Your task:
+ *  1) Use EXTRACT INTERFACE so each client depends only on what it needs.
+ *  2) You MUST NOT rename methods or change method signatures.
+ *  3) Keep behavior the same (stubs are fine).
+ *  4) Don’t split the class yet — only extract interfaces and rewire clients to them.
+ */
+
+// ======== The Bloater ========
+class OrderManager {
+    // In-memory DB + cache (pretend)
+    private final Map<String, Order> db = new ConcurrentHashMap<>();
+    private final Map<String, Order> cache = new ConcurrentHashMap<>();
+
+    // State for rate limit & audit
+    private final Deque<Instant> paymentCalls = new ArrayDeque<>();
+    private final List<String> auditLog = new ArrayList<>();
+
+    // ----- Core CRUD -----
+    public String createOrder(String customerId, List<String> itemSkus) {
+        String id = UUID.randomUUID().toString();
+        Order o = new Order(id, customerId, new ArrayList<>(itemSkus), "CREATED", Instant.now());
+        db.put(id, o);
+        logAudit("CREATE:" + id);
+        putCache(o);
+        return id;
+    }
+
+    public Optional<Order> getOrder(String orderId) {
+        Order c = getCache(orderId);
+        if (c != null) return Optional.of(c);
+        Order o = db.get(orderId);
+        if (o != null) putCache(o);
+        return Optional.ofNullable(o);
+    }
+
+    public List<Order> listOrders() {
+        return new ArrayList<>(db.values());
+    }
+
+    public boolean cancelOrder(String orderId) {
+        Order o = db.get(orderId);
+        if (o == null) return false;
+        o.status = "CANCELLED";
+        logAudit("CANCEL:" + orderId);
+        putCache(o);
+        return true;
+    }
+
+    // ----- Payments -----
+    public boolean validatePayment(String orderId, String cardToken) {
+        // pretend Luhn/3DS/etc.
+        return cardToken != null && cardToken.length() > 8 && db.containsKey(orderId);
+    }
+
+    public boolean chargeCard(String orderId, String cardToken, long cents) {
+        enforcePaymentRateLimit();
+        if (!validatePayment(orderId, cardToken)) return false;
+        // pretend gateway success
+        logAudit("CHARGE:" + orderId + ":" + cents);
+        return true;
+    }
+
+    public boolean refundPayment(String orderId, long cents) {
+        enforcePaymentRateLimit();
+        // pretend gateway success
+        logAudit("REFUND:" + orderId + ":" + cents);
+        return true;
+    }
+
+    // ----- Pricing & Discounts -----
+    public long calculateTax(long subtotalCents, String countryIso) {
+        if ("FR".equalsIgnoreCase(countryIso)) return Math.round(subtotalCents * 0.20);
+        if ("DE".equalsIgnoreCase(countryIso)) return Math.round(subtotalCents * 0.19);
+        return Math.round(subtotalCents * 0.10);
+    }
+
+    public long applyPromotions(long subtotalCents, String promoCode) {
+        if (promoCode == null) return subtotalCents;
+        if (promoCode.startsWith("SAVE10")) return Math.max(0, subtotalCents - 10_00);
+        if (promoCode.startsWith("HALF")) return subtotalCents / 2;
+        return subtotalCents;
+    }
+
+    // ----- Notifications -----
+    public void sendEmailConfirmation(String orderId, String email) {
+        logAudit("EMAIL:" + orderId + "->" + email);
+        // pretend SMTP
+    }
+
+    public void sendSms(String orderId, String phone) {
+        logAudit("SMS:" + orderId + "->" + phone);
+        // pretend SMS
+    }
+
+    // ----- Exporting/Reporting -----
+    public File exportOrdersCsv(File out) throws IOException {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(out))) {
+            pw.println("orderId,customerId,status,createdAt");
+            for (Order o : db.values()) {
+                pw.printf("%s,%s,%s,%s%n", o.id, o.customerId, o.status, o.createdAt);
+            }
+        }
+        logAudit("EXPORT_CSV:" + out.getAbsolutePath());
+        return out;
+    }
+
+    // ----- Persistence (pretend external) -----
+    public void openDbConnection() { /* pretend */ }
+    public void closeDbConnection() { /* pretend */ }
+    public void saveToDb(Order o) { db.put(o.id, o); logAudit("SAVE:" + o.id); }
+
+    // ----- Caching -----
+    public Order getCache(String orderId) { return cache.get(orderId); }
+    public void putCache(Order o) { cache.put(o.id, o); }
+    public void clearCache() { cache.clear(); }
+
+    // ----- Audit -----
+    public void logAudit(String line) {
+        auditLog.add(Instant.now() + " " + line);
+    }
+
+    public List<String> getAuditTrail() {
+        return Collections.unmodifiableList(auditLog);
+    }
+
+    // ----- Health & Ops -----
+    public boolean healthCheck() {
+        return true; // pretend ok
+    }
+
+    public void enforcePaymentRateLimit() {
+        Instant now = Instant.now();
+        paymentCalls.addLast(now);
+        while (!paymentCalls.isEmpty() && paymentCalls.peekFirst().isBefore(now.minusSeconds(1))) {
+            paymentCalls.removeFirst();
+        }
+        if (paymentCalls.size() > 5) {
+            throw new IllegalStateException("Payment rate limit exceeded");
+        }
+    }
+
+    // ----- Domain -----
+    public static class Order {
+        public final String id;
+        public final String customerId;
+        public final List<String> itemSkus;
+        public String status;
+        public final Instant createdAt;
+
+        public Order(String id, String customerId, List<String> itemSkus, String status, Instant createdAt) {
+            this.id = id;
+            this.customerId = customerId;
+            this.itemSkus = itemSkus;
+            this.status = status;
+            this.createdAt = createdAt;
+        }
+    }
+}
+
+// ======== Clients that currently depend on the God object ========
+class CheckoutController {
+    private final OrderManager orderManager;
+    public CheckoutController(OrderManager orderManager) { this.orderManager = orderManager; }
+
+    public String checkout(String customerId, List<String> skus, String cardToken, String email, String countryIso, String promoCode) {
+        String id = orderManager.createOrder(customerId, skus);
+        long subtotal = skus.stream().mapToLong(s -> 1999).sum(); // pretend flat price
+        long discounted = orderManager.applyPromotions(subtotal, promoCode);
+        long tax = orderManager.calculateTax(discounted, countryIso);
+        long total = discounted + tax;
+        if (!orderManager.chargeCard(id, cardToken, total)) {
+            orderManager.cancelOrder(id);
+            return "FAILED";
+        }
+        orderManager.sendEmailConfirmation(id, email);
+        return id;
+    }
+}
+
+class ReportingJob {
+    private final OrderManager orderManager;
+    public ReportingJob(OrderManager orderManager) { this.orderManager = orderManager; }
+
+    public File nightlyExport(File dir) throws IOException {
+        File out = new File(dir, "orders-" + LocalDate.now() + ".csv");
+        return orderManager.exportOrdersCsv(out);
+    }
+}
+
+class SupportTool {
+    private final OrderManager orderManager;
+    public SupportTool(OrderManager orderManager) { this.orderManager = orderManager; }
+
+    public String refundAndNotify(String orderId, long cents, String phone) {
+        boolean ok = orderManager.refundPayment(orderId, cents);
+        if (ok) orderManager.sendSms(orderId, phone);
+        return ok ? "OK" : "FAIL";
+    }
+}
+
+// ======== Tiny demo main (optional) ========
+class Demo {
+    public static void main(String[] args) throws Exception {
+        OrderManager om = new OrderManager();
+        CheckoutController c = new CheckoutController(om);
+        ReportingJob r = new ReportingJob(om);
+        SupportTool s = new SupportTool(om);
+
+        String id = c.checkout("C1", Arrays.asList("SKU1","SKU2"), "tok_123456789", "alice@example.com", "FR", "SAVE10");
+        System.out.println("Order: " + id);
+        System.out.println("Audit size: " + om.getAuditTrail().size());
+        File f = r.nightlyExport(new File("."));
+        System.out.println("Exported: " + f.getAbsolutePath());
+        System.out.println(s.refundAndNotify(id, 500, "+33123456789"));
+    }
+}
