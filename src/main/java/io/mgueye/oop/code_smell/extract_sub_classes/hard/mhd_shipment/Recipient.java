@@ -53,9 +53,8 @@ public class Recipient {
     if (city == null || city.isBlank()) return false;
     if (postalCode == null || postalCode.isBlank()) return false;
 
-    boolean provinceOrStateFieldIsNotClean = !(stateOrProvince == null || stateOrProvince.isBlank());
-    if (isInternational && provinceOrStateFieldIsNotClean)
-      return false;
+    boolean hasState = !(stateOrProvince == null || stateOrProvince.isBlank());
+    if (isInternational && !hasState) return false;
 
     return true;
   }

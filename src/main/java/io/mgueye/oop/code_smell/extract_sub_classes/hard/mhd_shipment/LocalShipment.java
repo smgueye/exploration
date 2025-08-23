@@ -58,10 +58,12 @@ public class LocalShipment extends Shipment {
 
   @Override
   public int estimateDeliveryDays(LocalDate shipDate) {
-    int days = this.option.isExpress() ? 1 : 3;
-    if (domesticRouting.getStateZone() != null && !domesticRouting.getStateZone().isBlank()) days += 2;
+    int days = option.isExpress() ? 1 : 3;
+    if (domesticRouting.getRemoteAreaCode() != null && !domesticRouting.getRemoteAreaCode().isBlank()) days += 2;
     if ("Z3".equals(domesticRouting.getStateZone())) days += 1;
-    if (this.option.isWeekendPickup() && (shipDate.getDayOfWeek() == DayOfWeek.SATURDAY || shipDate.getDayOfWeek() == DayOfWeek.SUNDAY)) {
+    if (option.isWeekendPickup()
+        && (shipDate.getDayOfWeek() == java.time.DayOfWeek.SATURDAY
+        || shipDate.getDayOfWeek() == java.time.DayOfWeek.SUNDAY)) {
       days += 1;
     }
     return Math.max(days, 1);
@@ -69,21 +71,24 @@ public class LocalShipment extends Shipment {
 
   @Override
   public double calculateTotalCharge() {
-    double volumetricWeight = (this.dimension.getLengthCm() * this.dimension.getWidthCm() * this.dimension.getHeightCm()) / this.billing.getVolumetricDivisor();
-    double chargeableWeight = Math.max(this.dimension.getWeightKg(), volumetricWeight);
-    double transport = chargeableWeight * this.billing.getBaseRatePerKg() * 1.15;
-    if (this.option.isExpress())
-      transport *= 1.35;
+    double volumetricWeight = (dimension.getLengthCm() * dimension.getWidthCm() * dimension.getHeightCm())
+        / billing.getVolumetricDivisor();
+    double chargeableWeight = Math.max(dimension.getWeightKg(), volumetricWeight);
+
+    double transport = chargeableWeight * billing.getBaseRatePerKg();
+    if (option.isExpress()) transport *= 1.35;
 
     double extras = 0.0;
-    if (this.option.isDangerousGoods()) extras += 25.0;
-    if (this.option.isWeekendPickup()) extras += this.billing.getBaseRatePerKg();
+    if (option.isDangerousGoods()) extras += 25.0;
+    if (option.isWeekendPickup()) extras += billing.getWeekendSurcharge();
+    if (domesticRouting.getRemoteAreaCode() != null && !domesticRouting.getRemoteAreaCode().isBlank()) {
+      extras += billing.getRuralSurcharge();
+    }
 
     double subtotal = transport + extras;
-    double vatBase = subtotal;
-    double vat = vatBase * this.billing.getVatRate();
+    double vat = subtotal * billing.getVatRate();
     double totalLocal = subtotal + vat;
-    double totalBilling = totalLocal * this.billing.getCurrencyRateToBilling();
+    double totalBilling = totalLocal * billing.getCurrencyRateToBilling();
 
     return Math.round(totalBilling * 100.0) / 100.0;
   }

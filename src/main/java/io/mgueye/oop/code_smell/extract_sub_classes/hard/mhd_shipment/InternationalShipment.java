@@ -80,33 +80,35 @@ public class InternationalShipment extends Shipment{
 
   @Override
   public double calculateTotalCharge() {
-    double volumetricWeight = (this.dimension.getLengthCm() * this.dimension.getWidthCm() * this.dimension.getHeightCm()) / this.billing.getVolumetricDivisor();
-    double chargeableWeight = Math.max(this.dimension.getWeightKg(), volumetricWeight);
-    double transport = chargeableWeight * this.billing.getBaseRatePerKg();
-    if (this.option.isExpress()) transport *= 1.35;
+    double volumetricWeight = (dimension.getLengthCm() * dimension.getWidthCm() * dimension.getHeightCm())
+        / billing.getVolumetricDivisor();
+    double chargeableWeight = Math.max(dimension.getWeightKg(), volumetricWeight);
+
+    double transport = chargeableWeight * billing.getBaseRatePerKg();
+    if (option.isExpress()) transport *= 1.35;
+    transport *= 1.15; // international uplift
 
     double extras = 0.0;
-    if (this.option.isDangerousGoods()) extras += 25.0;
-    if (this.option.isWeekendPickup()) extras += this.billing.getBaseRatePerKg();
-    if (domesticRouting.getRemoteAreaCode() != null && !domesticRouting.getRemoteAreaCode().isBlank())
-      extras += this.billing.getRuralSurcharge();
+    if (option.isDangerousGoods()) extras += 25.0;
+    if (option.isWeekendPickup()) extras += billing.getWeekendSurcharge();
 
-    double insurance = this.declaration.getDeclaredValue() * this.billing.getInsuranceRate();
+    double insurance = declaration.getDeclaredValue() * billing.getInsuranceRate();
+
     double duties = 0.0;
-    double dutiable = this.declaration.getDeclaredValue();
-    if ("DDP".equals(this.declaration.getIncoterms())) {
-      duties = dutiable * this.billing.getCustomsDutyRate();
+    if ("DDP".equals(declaration.getIncoterms())) {
+      duties = declaration.getDeclaredValue() * billing.getCustomsDutyRate();
     }
 
     double subtotal = transport + extras + insurance + duties;
+
     double vatBase = subtotal;
-      if ("DDP".equals(this.declaration.getIncoterms())) {
-        vatBase += this.declaration.getDeclaredValue();
+    if ("DDP".equals(declaration.getIncoterms())) {
+      vatBase += declaration.getDeclaredValue();
     }
 
-    double vat = vatBase * this.billing.getVatRate();
+    double vat = vatBase * billing.getVatRate();
     double totalLocal = subtotal + vat;
-    double totalBilling = totalLocal * this.billing.getCurrencyRateToBilling();
+    double totalBilling = totalLocal * billing.getCurrencyRateToBilling();
 
     return Math.round(totalBilling * 100.0) / 100.0;
   }
