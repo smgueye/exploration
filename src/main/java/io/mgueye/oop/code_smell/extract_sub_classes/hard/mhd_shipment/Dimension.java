@@ -29,4 +29,8 @@ public class Dimension {
   public double getHeightCm() {
     return heightCm;
   }
+  
+  public boolean isValid() {
+    return weightKg > 0 && lengthCm > 0 && widthCm > 0 && heightCm > 0;
+  }
 }
