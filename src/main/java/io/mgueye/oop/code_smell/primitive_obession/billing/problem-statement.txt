@@ -1,0 +1,163 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class BillingService {
+
+    // Line total with tax
+    public double calculateLineTotal(double unitPrice, int quantity, double taxRate, String currencyCode) {
+        double subtotal = unitPrice * quantity;
+        double tax = subtotal * taxRate;
+        return subtotal + tax;
+    }
+
+    // Discount as percentage (e.g., 0.10 for 10%)
+    public double applyDiscount(double amount, double discountPercent) {
+        return amount - (amount * discountPercent);
+    }
+
+    // Naive currencyType conversion using provided fx rate
+    public double convertCurrency(double amount, String fromCurrency, String toCurrency, double fxRate) {
+        if (fromCurrency.equals(toCurrency)) return amount;
+        return amount * fxRate;
+    }
+
+    // Overdue check using ISO dates (yyyy-MM-dd)
+    public boolean isOverdue(String dueDateIso, String paidDateIso) {
+        return paidDateIso.compareTo(dueDateIso) > 0;
+    }
+
+    // Simple late fee: prorated by days late, based on annual percentage rate
+    public double lateFee(double amount, String dueDateIso, String paidDateIso, double annualRatePercent) {
+        if (paidDateIso.compareTo(dueDateIso) <= 0) return 0.0;
+        int daysLate = daysBetween(dueDateIso, paidDateIso); // naive
+        double dailyRate = annualRatePercent / 365.0;
+        return amount * dailyRate * daysLate / 100.0;
+    }
+
+    // WARNING: super naive date diff just for kata; assumes same timezone and valid format
+    private int daysBetween(String yyyyMmDdStart, String yyyyMmDdEnd) {
+        String[] s = yyyyMmDdStart.split("-");
+        String[] e = yyyyMmDdEnd.split("-");
+        int start = Integer.parseInt(s[0]) * 365 + Integer.parseInt(s[1]) * 30 + Integer.parseInt(s[2]);
+        int end   = Integer.parseInt(e[0]) * 365 + Integer.parseInt(e[1]) * 30 + Integer.parseInt(e[2]);
+        return Math.max(0, end - start);
+    }
+
+    // Prints a user-facing summary in display currencyType
+    public String printInvoice(Invoice invoice, String displayCurrency, double fxRateToDisplayCurrency, String paymentTimeZone) {
+        double total = 0.0;
+        for (LineItem li : invoice.getItems()) {
+            double lineTotal = calculateLineTotal(li.getUnitPrice(), li.getQuantity(), li.getTaxRate(), invoice.getCurrencyCode());
+            total += lineTotal;
+        }
+        double discounted = applyDiscount(total, invoice.getDiscountPercent());
+        double converted = convertCurrency(discounted, invoice.getCurrencyCode(), displayCurrency, fxRateToDisplayCurrency);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Invoice #").append(invoice.getInvoiceNumber()).append("\n");
+        sb.append("Customer: ").append(invoice.getCustomerName()).append("\n");
+        sb.append(invoice.getStreet()).append("\n");
+        sb.append(invoice.getCity()).append(" ").append(invoice.getZip()).append("\n");
+        sb.append(invoice.getCountry()).append("\n\n");
+
+        sb.append("Issue Date: ").append(invoice.getIssueDateIso()).append("\n");
+        sb.append("Due Date (").append(paymentTimeZone).append("): ").append(invoice.getDueDateIso()).append("\n\n");
+
+        for (LineItem li : invoice.getItems()) {
+            sb.append(li.getQuantity()).append(" x ").append(li.getProductName())
+              .append(" @ ").append(li.getUnitPrice()).append(" ").append(invoice.getCurrencyCode())
+              .append(" (+").append((int)(li.getTaxRate() * 100)).append("% tax)")
+              .append(" = ").append(calculateLineTotal(li.getUnitPrice(), li.getQuantity(), li.getTaxRate(), invoice.getCurrencyCode()))
+              .append(" ").append(invoice.getCurrencyCode()).append("\n");
+        }
+
+        sb.append("\nSubtotal (after discount ").append((int)(invoice.getDiscountPercent() * 100)).append("%): ")
+          .append(discounted).append(" ").append(invoice.getCurrencyCode()).append("\n");
+
+        sb.append("Payable in ").append(displayCurrency).append(": ").append(converted).append(" ").append(displayCurrency).append("\n");
+
+        if (invoice.getPaidDateIso() != null && isOverdue(invoice.getDueDateIso(), invoice.getPaidDateIso())) {
+            double fee = lateFee(discounted, invoice.getDueDateIso(), invoice.getPaidDateIso(), invoice.getAnnualLateRatePercent());
+            double feeConv = convertCurrency(fee, invoice.getCurrencyCode(), displayCurrency, fxRateToDisplayCurrency);
+            sb.append("Late fee: ").append(feeConv).append(" ").append(displayCurrency).append("\n");
+        }
+
+        return sb.toString();
+    }
+}
+
+class LineItem {
+    private String productName;
+    private double unitPrice;         // in invoice currencyType
+    private int quantity;
+    private double taxRate;           // e.g., 0.20 for 20%
+
+    public LineItem(String productName, double unitPrice, int quantity, double taxRate) {
+        this.productName = productName;
+        this.unitPrice = unitPrice;
+        this.quantity = quantity;
+        this.taxRate = taxRate;
+    }
+
+    public String getProductName() { return productName; }
+    public double getUnitPrice() { return unitPrice; }
+    public int getQuantity() { return quantity; }
+    public double getTaxRate() { return taxRate; }
+}
+
+class Invoice {
+    private String invoiceNumber;
+    private String issueDateIso;          // "yyyy-MM-dd"
+    private String dueDateIso;            // "yyyy-MM-dd"
+    private String paidDateIso;           // nullable, "yyyy-MM-dd"
+    private String currencyCode;          // "USD", "EUR"...
+    private double discountPercent;       // e.g., 0.10 for 10%
+    private double annualLateRatePercent; // e.g., 12.0
+    private String customerName;
+    private String street;
+    private String city;
+    private String zip;
+    private String country;
+    private List<LineItem> items = new ArrayList<>();
+
+    public Invoice(String invoiceNumber,
+                   String issueDateIso,
+                   String dueDateIso,
+                   String currencyCode,
+                   double discountPercent,
+                   double annualLateRatePercent,
+                   String customerName,
+                   String street,
+                   String city,
+                   String zip,
+                   String country) {
+        this.invoiceNumber = invoiceNumber;
+        this.issueDateIso = issueDateIso;
+        this.dueDateIso = dueDateIso;
+        this.currencyCode = currencyCode;
+        this.discountPercent = discountPercent;
+        this.annualLateRatePercent = annualLateRatePercent;
+        this.customerName = customerName;
+        this.street = street;
+        this.city = city;
+        this.zip = zip;
+        this.country = country;
+    }
+
+    public void setPaidDateIso(String paidDateIso) { this.paidDateIso = paidDateIso; }
+    public void addItem(LineItem item) { this.items.add(item); }
+
+    public String getInvoiceNumber() { return invoiceNumber; }
+    public String getIssueDateIso() { return issueDateIso; }
+    public String getDueDateIso() { return dueDateIso; }
+    public String getPaidDateIso() { return paidDateIso; }
+    public String getCurrencyCode() { return currencyCode; }
+    public double getDiscountPercent() { return discountPercent; }
+    public double getAnnualLateRatePercent() { return annualLateRatePercent; }
+    public String getCustomerName() { return customerName; }
+    public String getStreet() { return street; }
+    public String getCity() { return city; }
+    public String getZip() { return zip; }
+    public String getCountry() { return country; }
+    public List<LineItem> getItems() { return items; }
+}
