@@ -1,0 +1,31 @@
+public class Ticket {
+    private final String id;
+    private final String priority; // "LOW", "MEDIUM", "HIGH"
+    private final String category; // "BUG", "FEATURE", "TASK"
+
+    public Ticket(String id, String priority, String category) {
+        this.id = id;
+        this.priority = priority;
+        this.category = category;
+    }
+
+    public int slaHours() {
+        if ("HIGH".equals(priority)) return 4;
+        if ("MEDIUM".equals(priority)) return 24;
+        if ("LOW".equals(priority)) return 72;
+        return 999;
+    }
+
+    public int defaultAssigneeTeamId() {
+        switch (category) {
+            case "BUG": return 10;
+            case "FEATURE": return 20;
+            case "TASK": return 30;
+            default: return -1;
+        }
+    }
+
+    public String label() {
+        return "[" + priority + "] " + category + " #" + id;
+    }
+}
