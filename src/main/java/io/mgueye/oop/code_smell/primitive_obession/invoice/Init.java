@@ -31,15 +31,11 @@ public class Init {
   public static class InvoiceService {
 
     public double calculateTotal(Invoice invoice) {
-      final Order order = invoice.getOrder();
-      double subtotal = order.getUnitPrice() * order.getQuantity();
-      return subtotal + (subtotal * order.getTaxRate());
+      return invoice.calculateTotal();
     }
 
     public String printSummary(Invoice invoice) {
-      final Order order = invoice.getOrder();
-      double total = calculateTotal(invoice);
-      return order.getQuantity() + "x " + order.getProduct().getName() + " @ " + order.getUnitPrice() + " each. Total (with tax): " + total;
+      return invoice.printSummary();
     }
   }
 
@@ -51,5 +47,15 @@ public class Init {
     }
 
     public Order getOrder() { return order; }
+
+    public double calculateTotal() {
+      double subtotal = order.getUnitPrice() * order.getQuantity();
+      return subtotal + (subtotal * order.getTaxRate());
+    }
+
+    public String printSummary() {
+      double total = calculateTotal();
+      return order.getQuantity() + "x " + order.getProduct().getName() + " @ " + order.getUnitPrice() + " each. Total (with tax): " + total;
+    }
   }
 }
