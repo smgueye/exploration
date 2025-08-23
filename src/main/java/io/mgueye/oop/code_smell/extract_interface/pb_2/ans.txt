@@ -1,0 +1,319 @@
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+
+public interface Account {
+  String createAccount(String email);
+
+  boolean activate(String accountId);
+
+  boolean deactivate(String accountId);
+
+  String getStatus(String accountId);
+}
+
+public interface Analytics {
+  Map<String, Object> getCohortMetrics();
+
+  String exportAudit();
+}
+
+public interface Loyalty {
+  int addPoints(String accountId, int delta);
+
+  boolean redeem(String accountId, int points);
+}
+
+public interface Messaging {
+  void sendEmail(String accountId, String subject, String body);
+
+  void sendSms(String accountId, String body);
+}
+
+public interface Privacy {
+  void enablePiiRedaction();
+
+  void disablePiiRedaction();
+}
+
+public interface Search {
+  Optional<String> findByEmail(String email);
+
+  List<String> suggestByPrefix(String emailPrefix);
+}
+
+public interface Subscription {
+  boolean activate(String accountId, String planCode);
+
+  boolean deactivate(String accountId, String planCode);
+
+  Set<String> getStatus(String accountId, boolean subscriptions);
+}
+
+public class CustomerHub implements Account, Subscription, Loyalty, Messaging, Search, Analytics, Privacy {
+
+  private final Map<String, Customer> customers = new ConcurrentHashMap<>();
+  private final Map<String, Customer> cache = new ConcurrentHashMap<>();
+  private final List<String> audit = new ArrayList<>();
+  private final Deque<Instant> msgCalls = new ArrayDeque<>();
+  private boolean redactPii = false;
+
+  @Override
+  public String createAccount(String email) {
+    String id = UUID.randomUUID().toString();
+    Customer c = new Customer(id, email, "PENDING", false, 0, new HashSet<>());
+    customers.put(id, c);
+    putCache(c);
+    log("CREATE_ACC:" + id);
+    return id;
+  }
+
+  @Override
+  public boolean activate(String accountId) { // (1) Account-activation
+    Customer c = customers.get(accountId);
+    if (c == null) return false;
+    c.accountStatus = "ACTIVE";
+    log("ACC_ACTIVATE:" + accountId);
+    putCache(c);
+    return true;
+  }
+
+  @Override
+  public boolean deactivate(String accountId) { // (1) Account-deactivation
+    Customer c = customers.get(accountId);
+    if (c == null) return false;
+    c.accountStatus = "SUSPENDED";
+    log("ACC_DEACT:" + accountId);
+    putCache(c);
+    return true;
+  }
+
+  @Override
+  public String getStatus(String accountId) { // (1) Account status
+    Customer c = customers.get(accountId);
+    return c == null ? "UNKNOWN" : c.accountStatus;
+  }
+
+  @Override
+  public boolean activate(String accountId, String planCode) { // (2) Subscription-activation
+    Customer c = customers.get(accountId);
+    if (c == null) return false;
+    c.activePlans.add(planCode);
+    log("SUB_ACTIVATE:" + accountId + ":" + planCode);
+    return true;
+  }
+
+  @Override
+  public boolean deactivate(String accountId, String planCode) { // (2) Subscription-deactivation
+    Customer c = customers.get(accountId);
+    if (c == null) return false;
+    boolean removed = c.activePlans.remove(planCode);
+    if (removed) log("SUB_DEACT:" + accountId + ":" + planCode);
+    return removed;
+  }
+
+  @Override
+  public Set<String> getStatus(String accountId, boolean subscriptions) { // (2) Subscription status
+    Customer c = customers.get(accountId);
+    return c == null ? Collections.emptySet() : Collections.unmodifiableSet(c.activePlans);
+  }
+
+  @Override
+  public int addPoints(String accountId, int delta) {
+    Customer c = customers.get(accountId);
+    if (c == null) return 0;
+    c.points = Math.max(0, c.points + delta);
+    log("LOYALTY_ADD:" + accountId + ":" + delta);
+    return c.points;
+  }
+
+  @Override
+  public boolean redeem(String accountId, int points) {
+    Customer c = customers.get(accountId);
+    if (c == null || c.points < points) return false;
+    c.points -= points;
+    log("LOYALTY_REDEEM:" + accountId + ":" + points);
+    return true;
+  }
+
+  @Override
+  public void sendEmail(String accountId, String subject, String body) {
+    rateLimit();
+    Customer c = customers.get(accountId);
+    log("EMAIL:" + accountId + ":" + safe(c, subject) + ":" + safe(c, body));
+  }
+
+  @Override
+  public void sendSms(String accountId, String body) {
+    rateLimit();
+    Customer c = customers.get(accountId);
+    log("SMS:" + accountId + ":" + safe(c, body));
+  }
+
+  @Override
+  public Optional<String> findByEmail(String email) {
+    for (Customer c : customers.values()) {
+      if (Objects.equals(c.email, email)) return Optional.of(c.id);
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public List<String> suggestByPrefix(String emailPrefix) {
+    List<String> ids = new ArrayList<>();
+    for (Customer c : customers.values()) {
+      if (c.email.startsWith(emailPrefix)) ids.add(c.id);
+    }
+    return ids;
+  }
+
+  @Override
+  public void enablePiiRedaction() { redactPii = true; }
+
+  @Override
+  public void disablePiiRedaction() { redactPii = false; }
+
+  @Override
+  public Map<String, Object> getCohortMetrics() {
+    Map<String, Object> m = new LinkedHashMap<>();
+    m.put("total", customers.size());
+    m.put("active", customers.values().stream().filter(c -> "ACTIVE".equals(c.accountStatus)).count());
+    m.put("withPlans", customers.values().stream().filter(c -> !c.activePlans.isEmpty()).count());
+    return m;
+  }
+
+  @Override
+  public String exportAudit() {
+    return String.join("\n", audit);
+  }
+
+  // ===== Internals =====
+  private void log(String line) { audit.add(Instant.now() + " " + line); }
+  private void rateLimit() {
+    Instant now = Instant.now();
+    msgCalls.addLast(now);
+    while (!msgCalls.isEmpty() && msgCalls.peekFirst().isBefore(now.minusSeconds(1))) {
+      msgCalls.removeFirst();
+    }
+    if (msgCalls.size() > 3) throw new IllegalStateException("Messaging rate limit exceeded");
+  }
+  private String safe(Customer c, String s) { return redactPii ? s.replaceAll("[A-Za-z0-9]", "*") : s; }
+  private Customer getCache(String id) { return cache.get(id); }
+  private void putCache(Customer c) { cache.put(c.id, c); }
+
+  static class Customer {
+    final String id;
+    final String email;
+    String accountStatus; // PENDING|ACTIVE|SUSPENDED
+    boolean marketingOptIn;
+    int points;
+    final Set<String> activePlans;
+
+    Customer(String id, String email, String status, boolean optIn, int points, Set<String> plans) {
+      this.id = id; this.email = email; this.accountStatus = status;
+      this.marketingOptIn = optIn; this.points = points; this.activePlans = plans;
+    }
+  }
+}
+
+public class MarketingAutomation {
+
+  private final Privacy privacy;
+  private final Messaging messaging;
+  private final Search search;
+
+  public MarketingAutomation(Privacy privacy, Messaging messaging, Search search) {
+    this.privacy = privacy;
+    this.messaging = messaging;
+    this.search = search;
+  }
+
+  public void sendCampaign(String accountId, String subject, String body) {
+    privacy.enablePiiRedaction();
+    messaging.sendEmail(accountId, subject, body);
+    privacy.disablePiiRedaction();
+  }
+
+  public List<String> expandAudience(String emailPrefix) {
+    return search.suggestByPrefix(emailPrefix);
+  }
+}
+
+public class SupportDesk {
+
+  private final Loyalty loyalty;
+  private final Messaging messaging;
+  private final Analytics analytics;
+  private final Search search;
+
+  public SupportDesk(Loyalty loyalty,
+                     Messaging messaging,
+                     Analytics analytics,
+                     Search search) {
+    this.loyalty = loyalty;
+    this.messaging = messaging;
+    this.analytics = analytics;
+    this.search = search;
+  }
+
+  public String refundWithSms(String accountId, int points, String sms) {
+    boolean ok = loyalty.redeem(accountId, points);
+    if (ok) messaging.sendSms(accountId, sms);
+    return ok ? "OK" : "FAIL";
+  }
+
+  public Optional<String> lookup(String email) {
+    return search.findByEmail(email);
+  }
+
+  public Map<String, Object> metrics() {
+    return analytics.getCohortMetrics();
+  }
+}
+
+public class AdminConsole {
+
+  private final Account account;
+  private final Subscription subscription;
+
+  public AdminConsole(Account account,
+                      Subscription subscription) {
+    this.account = account;
+    this.subscription = subscription;
+  }
+
+  public void activateAccountAndPlan(String accountId, String planCode) {
+    account.activate(accountId);                 // account activation
+    subscription.activate(accountId, planCode);       // subscription activation
+  }
+
+  public String suspendAndReport(String accountId) {
+    account.deactivate(accountId);
+    return account.getStatus(accountId);
+  }
+}
+
+public class Demo2 {
+
+  public static void main(String[] args) {
+    CustomerHub hub = new CustomerHub();
+    Account account = hub;
+    Subscription subscription = hub;
+    Privacy privacy = hub;
+    Messaging messaging = hub;
+    Search search = hub;
+    Loyalty loyalty = hub;
+    Analytics analytics = hub;
+
+    AdminConsole admin = new AdminConsole(account, subscription);
+    MarketingAutomation mkt = new MarketingAutomation(privacy, messaging, search);
+    SupportDesk sup = new SupportDesk(loyalty, messaging, analytics, search);
+
+    String id = hub.createAccount("alice@example.com");
+    admin.activateAccountAndPlan(id, "BASIC");
+    mkt.sendCampaign(id, "Hi Alice", "Welcome!");
+    System.out.println(sup.metrics());
+    System.out.println("Audit:\n" + hub.exportAudit());
+  }
+}

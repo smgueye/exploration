@@ -7,11 +7,11 @@ public class Demo {
 
   public static void main(String[] args) throws Exception {
     OrderManager om = new OrderManager();
-    Notification notification = new OrderManager();
-    Reporting reporting = new OrderManager();
-    Ordering ordering = new OrderManager();
-    Payment payment = new OrderManager();
-    Pricing pricing = new OrderManager();
+    Notification notification = om;
+    Reporting reporting = om;
+    Ordering ordering = om;
+    Payment payment = om;
+    Pricing pricing = om;
 
     CheckoutController c = new CheckoutController(ordering, pricing, payment, notification);
     ReportingJob r = new ReportingJob(reporting);
