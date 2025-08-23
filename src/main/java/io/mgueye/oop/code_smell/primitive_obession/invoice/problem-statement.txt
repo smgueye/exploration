@@ -1,0 +1,31 @@
+public class InvoiceService {
+
+    public double calculateTotal(double unitPrice, int quantity, double taxRate) {
+        double subtotal = unitPrice * quantity;
+        return subtotal + (subtotal * taxRate);
+    }
+
+    public String printSummary(String productName, double unitPrice, int quantity, double taxRate) {
+        double total = calculateTotal(unitPrice, quantity, taxRate);
+        return quantity + "x " + productName + " @ " + unitPrice + " each. Total (with tax): " + total;
+    }
+}
+
+public class Invoice {
+    private String productName;
+    private double unitPrice;
+    private int quantity;
+    private double taxRate;
+
+    public Invoice(String productName, double unitPrice, int quantity, double taxRate) {
+        this.productName = productName;
+        this.unitPrice = unitPrice;
+        this.quantity = quantity;
+        this.taxRate = taxRate;
+    }
+
+    public String getProductName() { return productName; }
+    public double getUnitPrice() { return unitPrice; }
+    public int getQuantity() { return quantity; }
+    public double getTaxRate() { return taxRate; }
+}
