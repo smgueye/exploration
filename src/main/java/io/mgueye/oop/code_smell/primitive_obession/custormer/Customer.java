@@ -1,4 +1,4 @@
-package io.mgueye.oop.code_smell.primitive_obession;
+package io.mgueye.oop.code_smell.primitive_obession.custormer;
 
 public class Customer {
 
