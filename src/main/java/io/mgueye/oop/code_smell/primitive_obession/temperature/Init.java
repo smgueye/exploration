@@ -1,17 +1,24 @@
 package io.mgueye.oop.code_smell.primitive_obession.temperature;
 
+import lombok.Getter;
+
 public class Init {
 
-  public class TemperatureService {
+  public static class TemperatureService {
 
-    public boolean isFever(Temperature temperature) {
-      return temperature.getInCelsius() > 37.5;
+    public boolean isFever(Patient patient) {
+      return patient
+          .getTemperature()
+          .getValueInCelsius() > 37.5;
     }
 
-    public String advice(Temperature temperature) {
-      if (temperature.getInCelsius() > 39) {
+    public String advice(Patient patient) {
+      double temperature= patient
+          .getTemperature()
+          .getValueInCelsius();
+      if (temperature > 39) {
         return "High fever, see a doctor!";
-      } else if (temperature.getInCelsius() > 37.5) {
+      } else if (temperature > 37.5) {
         return "Mild fever, take rest.";
       } else {
         return "Normal temperature.";
@@ -19,33 +26,25 @@ public class Init {
     }
   }
 
-  public class Temperature {
-    private double inCelsius;
+  @Getter
+  public static class Temperature {
 
-    public Temperature(double inCelsius) {
-      this.inCelsius = inCelsius;
-    }
+    private final double valueInCelsius;
 
-    public double getInCelsius() {
-      return inCelsius;
+    public Temperature(double valueInCelsius) {
+      this.valueInCelsius = valueInCelsius;
     }
   }
 
-  public class Patient {
-    private String name;
-    private Temperature temperature;
+  @Getter
+  public static class Patient {
+
+    private final String name;
+    private final Temperature temperature;
 
     public Patient(String name, Temperature temperature) {
       this.name = name;
       this.temperature = temperature;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public Temperature getTemperature() {
-      return temperature;
     }
   }
 
