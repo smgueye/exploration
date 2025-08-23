@@ -1,23 +1,17 @@
 package io.mgueye.oop.code_smell.primitive_obession;
 
 public class Order {
-  private String customerName;
-  private String customerPhone;
+  private Customer customer;
 
-  public Order(String customerName, String customerPhone) {
-    this.customerName = customerName;
-    this.customerPhone = customerPhone;
+  public Order(Customer customer) {
+    this.customer = customer;
   }
 
-  public String getCustomerName() {
-    return customerName;
-  }
-
-  public String getCustomerPhone() {
-    return customerPhone;
+  public Customer getCustomer() {
+    return customer;
   }
 
   public String printSummary() {
-    return "Order for " + customerName + " (" + customerPhone + ")";
+    return "Order for " + customer.getName() + " (" + customer.getPhone() + ")";
   }
 }
