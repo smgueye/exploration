@@ -45,7 +45,7 @@ public class Init {
       sb.append("Invoice #").append(invoice.getInvoiceNumber()).append("\n");
       sb.append("Customer: ").append(customer.getName()).append("\n");
       sb.append(address.getStreet()).append("\n");
-      sb.append(address.getCity()).append(" ").append(customer.address.getZip()).append("\n");
+      sb.append(address.getCity()).append(" ").append(address.getZip()).append("\n");
       sb.append(address.getCountry()).append("\n\n");
 
       sb.append("Issue Date: ").append(invoice.getIssueDateIso()).append("\n");
@@ -175,7 +175,7 @@ public class Init {
       return date.compareTo(dueDate.getDate());
     }
 
-    private int daysBetween(IsoDate endAt) {
+    public int daysBetween(IsoDate endAt) {
       String[] s = date.split("-");
       String[] e = endAt.getDate().split("-");
       int start = Integer.parseInt(s[0]) * 365 + Integer.parseInt(s[1]) * 30 + Integer.parseInt(s[2]);
@@ -270,7 +270,7 @@ public class Init {
 
     public boolean isOverDue() {
       LocalDate nowInLocal = LocalDate.now();
-      IsoDate nowInIso = new IsoDate(String.format("%s-%s-%s", nowInLocal.getYear(), nowInLocal.getMonth(), nowInLocal.getDayOfWeek()));
+      IsoDate nowInIso = new IsoDate(String.format("%s-%s-%s", nowInLocal.getYear(), nowInLocal.getMonth(), nowInLocal.getDayOfMonth()));
       boolean isOverdue = dueDate.isOverdue(nowInIso);
       if (Objects.isNull(paidDate) &&  isOverdue) {
         return false;
