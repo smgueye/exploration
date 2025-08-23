@@ -4,16 +4,14 @@ public class Init {
 
   public class TemperatureService {
 
-    // takes raw primitives
-    public boolean isFever(double temperatureCelsius) {
-      return temperatureCelsius > 37.5;
+    public boolean isFever(Temperature temperature) {
+      return temperature.getInCelsius() > 37.5;
     }
 
-    // again breaks the object into primitives
-    public String advice(double temperatureCelsius) {
-      if (temperatureCelsius > 39) {
+    public String advice(Temperature temperature) {
+      if (temperature.getInCelsius() > 39) {
         return "High fever, see a doctor!";
-      } else if (temperatureCelsius > 37.5) {
+      } else if (temperature.getInCelsius() > 37.5) {
         return "Mild fever, take rest.";
       } else {
         return "Normal temperature.";
@@ -21,21 +19,33 @@ public class Init {
     }
   }
 
+  public class Temperature {
+    private double inCelsius;
+
+    public Temperature(double inCelsius) {
+      this.inCelsius = inCelsius;
+    }
+
+    public double getInCelsius() {
+      return inCelsius;
+    }
+  }
+
   public class Patient {
     private String name;
-    private double temperatureCelsius;
+    private Temperature temperature;
 
-    public Patient(String name, double temperatureCelsius) {
+    public Patient(String name, Temperature temperature) {
       this.name = name;
-      this.temperatureCelsius = temperatureCelsius;
+      this.temperature = temperature;
     }
 
     public String getName() {
       return name;
     }
 
-    public double getTemperatureCelsius() {
-      return temperatureCelsius;
+    public Temperature getTemperature() {
+      return temperature;
     }
   }
 
