@@ -1,8 +1,6 @@
 package io.mgueye.oop.code_smell.extract_sub_classes.hard.mhd_shipment;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.Objects;
 
 public class LocalShipment extends Shipment {
 
