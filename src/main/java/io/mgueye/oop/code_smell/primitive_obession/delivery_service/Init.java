@@ -4,6 +4,16 @@ import lombok.Getter;
 
 public class Init {
 
+  public static void main(String[] args) {
+    Init.DeliveryService deliveryService = new DeliveryService();
+    Init.Package aPackage = new Init.Package(
+      new Recipient("Dieynab",
+        new Address("Hasbrouk Appartment", "Ithaca", "0000", Country.US)), 10, 50000);
+    System.out.printf("Shipping cost : %s ; Delivery label : %s%n",
+      deliveryService.calculateShippingCost(aPackage),
+      deliveryService.deliveryLabel(aPackage));
+  }
+
   public static class DeliveryService {
 
     public double calculateShippingCost(Package pack) {
@@ -18,17 +28,38 @@ public class Init {
   }
 
   @Getter
+  public static enum Country {
+    US(5), FR(10), OTHER(15);
+
+    private final double surcharge;
+
+    Country(double surcharge) {
+      this.surcharge = surcharge;
+    }
+
+    public double surcharge() { return surcharge; }
+
+    public static Country from(String code) {
+      return switch (code)  {
+        case "US" -> US;
+        case "FR" -> FR;
+        default -> OTHER;
+      };
+    }
+  }
+
+  @Getter
   public static class Address {
     private final String street;
     private final String city;
     private final String zip;
-    private final String countryCode;
+    private final Country country;
 
-    public Address(String street, String city, String zip, String countryCode) {
+    public Address(String street, String city, String zip, Country country) {
       this.street = street;
       this.city = city;
       this.zip = zip;
-      this.countryCode = countryCode;
+      this.country = country;
     }
   }
 
@@ -46,7 +77,7 @@ public class Init {
       return "To: " + name + "\n" +
           address.getStreet() + "\n" +
           address.getCity() + " " + address.getZip() + "\n" +
-          address.getCountryCode();
+          address.getCountry();
     }
   }
 
@@ -66,7 +97,8 @@ public class Init {
       final double base = weightKg * 2 + distanceKm * 0.5;
       final String countryCode = recipient
         .getAddress()
-        .getCountryCode();
+        .getCountry()
+        .name();
       if ("US".equals(countryCode)) {
         return base + 5;
       } else if ("FR".equals(countryCode)) {
