@@ -1,0 +1,49 @@
+// Refactoring using : Replace Type code with SubClasses
+
+public class Notification {
+    private final String recipient;
+    private final String message;
+    private final int type; // 0 = EMAIL, 1 = SMS, 2 = PUSH
+
+    public Notification(String recipient, String message, int type) {
+        this.recipient = recipient;
+        this.message = message;
+        this.type = type;
+    }
+
+    public String channelName() {
+        switch (type) {
+            case 0: return "Email";
+            case 1: return "SMS";
+            case 2: return "Push";
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public int maxLength() {
+        switch (type) {
+            case 0: return 10000; // emails are long
+            case 1: return 160;   // classic SMS limit
+            case 2: return 200;   // push payload cap
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public String render() {
+        switch (type) {
+            case 0: return "To: " + recipient + "\n\n" + message;
+            case 1: return recipient + ": " + message;
+            case 2: return "[PUSH] " + message;
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+
+    public boolean canScheduleAtNight() {
+        switch (type) {
+            case 0: return true;
+            case 1: return false;
+            case 2: return true;
+            default: throw new IllegalArgumentException("Unknown type: " + type);
+        }
+    }
+}
