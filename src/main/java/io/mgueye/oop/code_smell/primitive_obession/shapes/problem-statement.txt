@@ -1,0 +1,39 @@
+// Refactoring using : Replace Type code with SubClasses
+
+public class Shape {
+  private final int type; // 0 = CIRCLE, 1 = RECTANGLE, 2 = TRIANGLE
+  private final double a; // for circle: radius; rectangle: width; triangle: sideA
+  private final double b; // rectangle: height; triangle: sideB
+  private final double c; // triangle: sideC
+
+  public Shape(int type, double a, double b, double c) {
+    this.type = type; this.a = a; this.b = b; this.c = c;
+  }
+
+  public double area() {
+    switch (type) {
+      case 0: return Math.PI * a * a;
+      case 1: return a * b;
+      case 2: double s = (a + b + c) / 2.0; return Math.sqrt(s*(s-a)*(s-b)*(s-c));
+      default: throw new IllegalArgumentException();
+    }
+  }
+
+  public double perimeter() {
+    switch (type) {
+      case 0: return 2 * Math.PI * a;
+      case 1: return 2 * (a + b);
+      case 2: return a + b + c;
+      default: throw new IllegalArgumentException();
+    }
+  }
+
+  public String svg() {
+    switch (type) {
+      case 0: return "<circle r=\"" + a + "\" />";
+      case 1: return "<rect width=\"" + a + "\" height=\"" + b + "\" />";
+      case 2: return "<polygon points=\"0,0 " + a + ",0 " + b + "," + c + "\" />";
+      default: throw new IllegalArgumentException();
+    }
+  }
+}
