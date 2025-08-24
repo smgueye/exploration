@@ -5,7 +5,7 @@ import lombok.Getter;
 public class Init {
 
   @Getter
-  public abstract class Notification {
+  public sealed abstract class Notification permits EmailNotification, SmsNotification, PushNotification {
     private final String recipient;
     private final String message;
 
@@ -14,24 +14,13 @@ public class Init {
       this.message = message;
     }
 
-    public String channelName() {
-        throw new IllegalArgumentException("Unknown type.");
-    }
-
-    public int maxLength() {
-      throw new IllegalArgumentException("Unknown type.");
-    }
-
-    public String render() {
-      throw new IllegalArgumentException("Unknown type.");
-    }
-
-    public boolean canScheduleAtNight() {
-      throw new IllegalArgumentException("Unknown type.");
-    }
+    public abstract String channelName();
+    public abstract int maxLength();
+    public abstract String render();
+    public abstract boolean canScheduleAtNight();
   }
 
-  class EmailNotification extends Notification {
+  final class EmailNotification extends Notification {
     public EmailNotification(String recipient, String message) {
       super(recipient, message);
     }
@@ -57,7 +46,7 @@ public class Init {
     }
   }
 
-  class SmsNotification extends Notification {
+  final class SmsNotification extends Notification {
     public SmsNotification(String recipient, String message) {
       super(recipient, message);
     }
@@ -77,12 +66,13 @@ public class Init {
       return getRecipient() + ": " + getMessage();
     }
 
+    @Override
     public boolean canScheduleAtNight() {
       return false;
     }
   }
 
-  class PushNotification extends Notification {
+  final class PushNotification extends Notification {
     public PushNotification(String recipient, String message) {
       super(recipient, message);
     }
@@ -102,6 +92,7 @@ public class Init {
       return "[PUSH] " + getMessage();
     }
 
+    @Override
     public boolean canScheduleAtNight() {
       return true;
     }
