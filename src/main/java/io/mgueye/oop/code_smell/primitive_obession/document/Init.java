@@ -10,7 +10,7 @@ public class Init {
   }
 
   public static class Document {
-    private DocumentState documentState;
+    private DocumentState state;
 
     @Getter
     @Setter
@@ -26,29 +26,42 @@ public class Init {
     public Document(String title, String content) {
       this.title = title;
       this.content = content;
-      this.documentState = new DraftType();
+      this.state = new DraftType();
     }
 
-    public int getStateCode() { return documentState.getCode().ordinal(); }
+    public void setState(DocumentState state) {
+      this.state = state;
+      // Later with singleton PublishedType.INSTANCE
+    }
+
+    public void editTitle(String newTitle) {
+      state.editTitle(this, newTitle);
+    }
+
+    public void editContent(Document document, String newContent) {
+      state.editContent(this, newContent);
+    }
+
+    public DocumentStateCode getStateCode() { return state.getCode(); }
 
     public void publish() {
-      documentState.publish(this);
+      state.publish(this);
     }
 
     public void archive() {
-     documentState.archive(this);
+     state.archive(this);
     }
 
     public boolean canShare() {
-      return documentState.canShare(this);
+      return state.canShare(this);
     }
 
     public String visibilityLabel() {
-      return documentState.visibilityLabel(this);
+      return state.visibilityLabel(this);
     }
 
     public String statusLine() {
-      return documentState.statusLine(this);
+      return state.statusLine(this);
     }
   }
 
@@ -94,7 +107,9 @@ public class Init {
 
   static final class DraftType extends DocumentState {
 
-    public DraftType() {
+    static final DraftType DRAFT = new DraftType();
+
+    private DraftType() {
       super(DocumentStateCode.DRAFT);
     }
 
@@ -111,13 +126,13 @@ public class Init {
     @Override
     public void publish(Document document) {
       document.publishedAt = Instant.now();
-      document.documentState = new PublishedType();
+      document.state = new PublishedType();
     }
 
     @Override
     public void archive(Document document) {
       document.archivedAt = Instant.now();
-      document.documentState = new ArchivedType();
+      document.state = new ArchivedType();
     }
 
     @Override
@@ -160,7 +175,7 @@ public class Init {
     @Override
     public void archive(Document document) {
       document.archivedAt = Instant.now();
-      document.documentState = new ArchivedType();
+      document.state = new ArchivedType();
     }
 
     @Override
